@@ -61,6 +61,11 @@
         <pluginManagement>
             <plugins>
                 <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>build-helper-maven-plugin</artifactId>
+                    <version>3.0.0</version>
+                </plugin>
+                <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-release-plugin</artifactId>
                     <version>2.5.3</version>
@@ -72,6 +77,52 @@
                 </plugin>
             </plugins>
         </pluginManagement>
+        <plugins>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.0.0</version>
+                <executions>
+                    <execution>
+                        <phase>validate</phase>
+                        <id>parse-version</id>
+                        <goals>
+                            <goal>parse-version</goal>
+                        </goals>
+                        <configuration>
+                            <propertyPrefix>parsedVersion</propertyPrefix>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-release-plugin</artifactId>
+                <version>2.5.3</version>
+                <configuration>
+                    <!-- <tagNameFormat>release/R${parsedVersion.majorVersion}.${parsedVersion.minorVersion}/@{project.version}</tagNameFormat> -->
+                    <!-- <tagNameFormat>@{project.artifactId}-@{project.version}</tagNameFormat> -->
+                    <!-- <tagNameFormat>release/R15.1/@{project.version}</tagNameFormat> -->
+                    <checkModificationExcludes>
+                        <checkModificationExcludes>**/*.launch</checkModificationExcludes>
+                        <checkModificationExcludes>**/pom.xml</checkModificationExcludes>
+                        <checkModificationExcludes>${project.basedir}/.settings/*</checkModificationExcludes>
+                    </checkModificationExcludes>
+                    <!-- <username>${env.username}</username> -->
+                    <!-- <password>${settings.properties.pw}</password> -->
+                    <releaseProfiles>apiDocs</releaseProfiles>
+                    <goals>-DskipTests=true clean install</goals>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>versions-maven-plugin</artifactId>
+                <version>2.7</version>
+                <configuration>
+                    <generateBackupPoms>false</generateBackupPoms>
+                </configuration>
+            </plugin>
+        </plugins>
     </build>
 
 </project>
