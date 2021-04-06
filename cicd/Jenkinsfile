@@ -3,12 +3,12 @@ pipeline {
         buildDiscarder(logRotator(numToKeepStr: '10'))
         disableConcurrentBuilds()
     }
-    agent { label 'maven-slave-jdk11' }
+    agent { any }
     environment {
-        gitCredentialsId = 'axa-advice-cicd-dev-axa-ch-beratungs-services-modules-github-key'
-        OpenShiftProjectDev = 'axa-advice-sme-dev-axa-ch'
-        OpenShiftClusterName = 'axa-advice-sme-dev-axa-ch-private-blue'
-        buildArtifact = 'partner-domain/target/'
+        gitCredentialsId = ''
+        OpenShiftProjectDev = ''
+        OpenShiftClusterName = ''
+        buildArtifact = ''
         deployableArtifact = 'partner-domain-0.1.0.jar'
         //buildArtifact = 'beratungs-services-web/target/${deployableArtifact}'
         mvnVersion = ''

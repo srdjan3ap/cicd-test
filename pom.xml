@@ -25,12 +25,11 @@
         <spring.boot.devtools.version>2.4.4</spring.boot.devtools.version>
         <spring.boot.starter.test.version>2.4.4</spring.boot.starter.test.version>
     </properties>
-
     <scm>
-        <connection></connection>
-        <developerConnection></developerConnection>
-        <!-- TODO  -->
-        <tag>beratungs-services-modules.0.1.0</tag>
+        <developerConnection>scm:git:https://github.com/srdjan3ap/cicd-test.git</developerConnection>
+        <connection>scm:git:https://github.com/srdjan3ap/cicd-test.git</connection>
+        <!-- TODO
+        <tag>beratungs-services-modules.0.1.0</tag> -->
     </scm>
 
     <dependencyManagement>
