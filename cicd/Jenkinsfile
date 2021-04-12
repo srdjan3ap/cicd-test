@@ -3,17 +3,18 @@ pipeline {
     stages {
         stage('General') {
             steps {
-                echo 'Running mvn release:prepare'
-                sh "mvn release:prepare"
-                sh 'mvn release:perform -Darguments="-Dmaven.deploy.skip=true"'
+                script {
+                    echo 'Running mvn release:prepare'
+                    sh "mvn release:prepare"
+                    sh 'mvn release:perform -Darguments="-Dmaven.deploy.skip=true"'
 
-                def latestTag = sh(
-                returnStdout: true,
-                script: 'git describe --abbrev=0 --tags'
-                ).trim()
+                    def latestTag = sh(
+                        returnStdout: true,
+                        script: 'git describe --abbrev=0 --tags'
+                    ).trim()
 
-                sh "git checkout -b release/${latestTag}-TEST"
-
+                    sh "git checkout -b release/${latestTag}-TEST"
+                }
             }
         }
     }
