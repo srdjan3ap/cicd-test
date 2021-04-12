@@ -3,7 +3,7 @@
     <parent>
         <artifactId>cicd-example</artifactId>
         <groupId>com.srdjan</groupId>
-        <version>0.3.0-SNAPSHOT</version>
+        <version>0.3.0</version>
     </parent>
 
 
