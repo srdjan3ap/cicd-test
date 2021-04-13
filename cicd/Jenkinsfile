@@ -3,7 +3,7 @@ pipeline {
     stages {
         stage('General') {
             steps {
-                script {
+                withMaven(maven: 'mvn') {
                     echo 'Running mvn release:prepare'
                     sh "mvn release:prepare"
                     sh 'mvn release:perform -Darguments="-Dmaven.deploy.skip=true"'
