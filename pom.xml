@@ -121,15 +121,6 @@
                     <generateBackupPoms>false</generateBackupPoms>
                 </configuration>
             </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-scm-plugin</artifactId>
-                <version>1.11.2</version>
-                <configuration>
-                    <goals>install</goals>
-                    <goalsDirectory>test-properties</goalsDirectory>
-                </configuration>
-            </plugin>
         </plugins>
     </build>
 
