@@ -10,7 +10,7 @@ pipeline {
 //                     sh 'git config --global user.email "srdjan@3ap.ch"'
 //                     sh 'git config --global user.name "Srdjan Obradovic"'
                     echo 'Running mvn release:prepare'
-                    sh "mvn release:prepare"
+                    sh "mvn release:clean release:prepare"
                     sh 'mvn release:perform -Darguments="-Dmaven.deploy.skip=true"'
 
                     def latestTag = sh(
