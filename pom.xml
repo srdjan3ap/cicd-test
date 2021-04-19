@@ -109,7 +109,7 @@
                     </checkModificationExcludes>
                     <!-- <username>${env.username}</username> -->
                     <!-- <password>${settings.properties.pw}</password> -->
-                    <releaseProfiles>apiDocs</releaseProfiles>
+                    <!-- <releaseProfiles>apiDocs</releaseProfiles> -->
                     <!-- <goals>-DskipTests=true clean install</goals> -->
                 </configuration>
             </plugin>
