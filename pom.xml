@@ -27,8 +27,7 @@
     <scm>
         <developerConnection>scm:git:https://github.com/srdjan3ap/cicd-test.git</developerConnection>
         <connection>scm:git:https://github.com/srdjan3ap/cicd-test.git</connection>
-        <!-- TODO
-        <tag>beratungs-services-modules.0.1.0</tag> -->
+
     <tag>release/version</tag>
   </scm>
 
@@ -99,7 +98,7 @@
                 <artifactId>maven-release-plugin</artifactId>
                 <version>2.5.3</version>
                 <configuration>
-                    <!-- <tagNameFormat>release/R${parsedVersion.majorVersion}.${parsedVersion.minorVersion}/@{project.version}</tagNameFormat> -->
+                     <tagNameFormat>release/R${parsedVersion.majorVersion}.${parsedVersion.minorVersion}/@{project.version}</tagNameFormat>
                     <!-- <tagNameFormat>@{project.artifactId}-@{project.version}</tagNameFormat> -->
                     <!-- <tagNameFormat>release/R15.1/@{project.version}</tagNameFormat> -->
                     <checkModificationExcludes>
