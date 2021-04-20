@@ -19,6 +19,20 @@ pipeline {
                      set variables result:
                      ********************
                      """
+
+                     try{
+                     sh "mvn --batch-mode clean build-helper:parse-version release:prepare -DdevelopmentVersion=${parsedVersion.majorVersion}.${parsedVersion.nextMinorVersion}.0-SNAPSHOT release:perform -Darguments="-Dmaven.deploy.skip=true -Dmaven.javadoc.skip=true""
+                     def latestTag = sh(
+                             returnStdout: true,
+                             script: 'git describe --abbrev=0 --tags'
+                     ).trim()
+                     sh 'git -b {latestTag}'
+                     }
+                     catch(exc) {
+                     echo 'failed - cleaning up'
+                     sh 'mvn release:clean'
+                     throw (exc)
+                     }
 //                     sh 'git config --global user.email "srdjan@3ap.ch"'
 //                     sh 'git config --global user.name "Srdjan Obradovic"'
 //                     echo 'Running mvn release:prepare'
