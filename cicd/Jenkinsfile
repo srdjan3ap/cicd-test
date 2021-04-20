@@ -13,12 +13,11 @@ pipeline {
                      Build INPUT:
                      ************
                      env.BRANCH_NAME=${env.BRANCH_NAME}
-                     GIT_BRANCH=${GIT_BRANCH}
+
                      env.JOB_NAME=${env.JOB_NAME}
                      ********************
                      set variables result:
                      ********************
-                     gitBranch=${gitBranch}
                      """
 //                     sh 'git config --global user.email "srdjan@3ap.ch"'
 //                     sh 'git config --global user.name "Srdjan Obradovic"'
