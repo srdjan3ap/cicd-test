@@ -25,11 +25,11 @@
         <spring.boot.starter.test.version>2.4.4</spring.boot.starter.test.version>
     </properties>
     <scm>
-        <developerConnection>scm:git:https://github.com/srdjan3ap/cicd-test.git</developerConnection>
+        <developerConnection>scm:git:git@github.com:srdjan3ap/cicd-test.git</developerConnection>
 <!--        <connection>scm:git:https://github.com/srdjan3ap/cicd-test.git</connection>-->
 
 <!--        <developerConnection>scm:git:git@github.com:srdjan3ap/cicd-test.git</developerConnection>-->
-        <connection>scm:git:https://github.com/srdjan3ap/cicd-test.git</connection>
+        <connection>scm:git:git@github.com:srdjan3ap/cicd-test.git</connection>
         <url>https://github.com/srdjan3ap/cicd-test.git</url>
 
 
