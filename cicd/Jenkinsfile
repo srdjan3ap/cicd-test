@@ -21,6 +21,8 @@ pipeline {
                      """
 
                      try{
+                     sh 'git config --global user.email "srdjan@3ap.ch"'
+                     sh 'git config --global user.name "Srdjan Obradovic"'
                      sh 'git checkout develop'
                      sh 'mvn --batch-mode clean build-helper:parse-version release:prepare -DdevelopmentVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.nextMinorVersion}.0-SNAPSHOT release:perform -Darguments="-Dmaven.deploy.skip=true -Dmaven.javadoc.skip=true"'
 //                      def latestTag = sh(
@@ -34,8 +36,7 @@ pipeline {
                      sh 'mvn release:clean'
                      throw (exc)
                      }
-//                     sh 'git config --global user.email "srdjan@3ap.ch"'
-//                     sh 'git config --global user.name "Srdjan Obradovic"'
+
 //                     echo 'Running mvn release:prepare'
 //                     sh "mvn release:clean release:prepare"
 //                     sh 'mvn release:perform -Darguments="-Dmaven.deploy.skip=true"'
