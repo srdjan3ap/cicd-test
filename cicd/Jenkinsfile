@@ -39,9 +39,13 @@ pipeline {
                             sh 'mvn --batch-mode clean build-helper:parse-version release:prepare -DdevelopmentVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.nextMinorVersion}.0-SNAPSHOT release:perform -Darguments="-Dmaven.deploy.skip=true -Dmaven.javadoc.skip=true"'
                                                  def latestTag = sh(
                                                          returnStdout: true,
-                                                         script: 'git describe --abbrev=0 --tags'
+                                                         script: 'git describe --tags `git rev-list --tags --max-count=1`'
                                                  ).trim()
-                                                 sh 'git -b {latestTag}'
+                                                 sh 'git checkout $tag -b release/${latestTag}'
+                                                 sh 'git push -u origin release/${latestTag}'
+
+                                                 echo 'release/${latestTag}'
+
                         }
                      }
                      catch(exc) {

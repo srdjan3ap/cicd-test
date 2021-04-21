@@ -102,9 +102,7 @@
                 <artifactId>maven-release-plugin</artifactId>
                 <version>2.5.3</version>
                 <configuration>
-                     <tagNameFormat>release/@{project.version}</tagNameFormat>
-                    <!-- <tagNameFormat>@{project.artifactId}-@{project.version}</tagNameFormat> -->
-                    <!-- <tagNameFormat>release/R15.1/@{project.version}</tagNameFormat> -->
+                    <tagNameFormat>@{project.version}</tagNameFormat>
                     <checkModificationExcludes>
                         <checkModificationExcludes>**/*.launch</checkModificationExcludes>
                         <checkModificationExcludes>**/pom.xml</checkModificationExcludes>
