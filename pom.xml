@@ -14,7 +14,7 @@
     </parent>
     <groupId>com.srdjan</groupId>
     <artifactId>cicd-example</artifactId>
-    <version>4.15.0</version>
+    <version>4.16.0-SNAPSHOT</version>
     <name>cicd-example</name>
     <description>Demo project for CI/CD</description>
 
@@ -32,7 +32,7 @@
         <connection>scm:git:git@github.com:srdjan3ap/cicd-test.git</connection>
 
 
-    <tag>release/4.15.0</tag>
+    <tag>HEAD</tag>
   </scm>
 
     <dependencyManagement>
