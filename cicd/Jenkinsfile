@@ -4,6 +4,17 @@ pipeline {
         maven 'M3'
       }
     stages {
+        stage('Clone sources') {
+                    steps {
+                        //git credentialsId: gitCredentialsId, url: gitRepo, branch: gitBranch
+                        script {
+                            //gitHash = gitShortHash().trim()
+                            //mvnVersion = getVersionFromPom('./pom.xml').trim()
+                            sh 'git config user.name Srdjan Obradovic'
+                            sh 'git config user.email srdjan@3ap.ch'
+                        }
+                    }
+                }
         stage('General') {
             steps {
                 script {
