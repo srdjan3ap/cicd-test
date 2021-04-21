@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        GIT_ID = '51a3f7e4-d7a7-4493-95c7-77b44fe64d46'
+        GIT_ID = 'github-jenkins-ssh'
     }
     tools {
         maven 'M3'
