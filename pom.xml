@@ -28,7 +28,7 @@
         <developerConnection>scm:git:https://github.com/srdjan3ap/cicd-test.git</developerConnection>
         <connection>scm:git:https://github.com/srdjan3ap/cicd-test.git</connection>
 
-    <tag>release/version</tag>
+    <tag>HEAD</tag>
   </scm>
 
     <dependencyManagement>
