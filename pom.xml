@@ -30,8 +30,6 @@
 
 <!--        <developerConnection>scm:git:git@github.com:srdjan3ap/cicd-test.git</developerConnection>-->
         <connection>scm:git:git@github.com:srdjan3ap/cicd-test.git</connection>
-        <url>https://github.com/srdjan3ap/cicd-test.git</url>
-
 
 
     <tag>HEAD</tag>
