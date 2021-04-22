@@ -70,10 +70,8 @@ pipeline {
           echo 'All ended well!'
         }
       }
-    }
-
   }
-
+}
 /**
  * returns true, if the last commit was created by a release build (i.e. contains "maven-release-plugin")
  */
