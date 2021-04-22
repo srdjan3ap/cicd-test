@@ -1,79 +1,78 @@
 pipeline {
-    agent any
-    environment {
-        GIT_ID = 'github-jenkins-ssh'
-    }
-    parameters {
-            booleanParam(
-                    name: 'IS_RELEASE',
-                    description: 'Create a Maven release (false -> SNAPSHOT build)',
-                    defaultValue: false
-            )
+  agent any
+  environment {
+    GIT_ID = 'github-jenkins-ssh'
+  }
+  parameters {
+    booleanParam(
+      name: 'IS_RELEASE',
+      description: 'Create a Maven release (false -> SNAPSHOT build)',
+      defaultValue: false
+    )
+  }
+  tools {
+    maven 'M3'
+  }
+  stages {
+
+    stage('Set variables') {
+      steps {
+        script {
+          isRelease = false
+          if (params.IS_RELEASE) {
+              isRelease = true
+            }
+          }
         }
-    tools {
-        maven 'M3'
       }
-    stages {
-
-        stage('Set variables') {
-            steps {
-                script {
-                    isRelease = false
-                    if ((params.IS_RELEASE) {
-                        isRelease = true
-                    }
-                }
-            }
+      stage('Clone sources') {
+        steps {
+          script {
+            sh 'git config user.name Srdjan Obradovic'
+            sh 'git config user.email srdjan@3ap.ch'
+          }
         }
-        stage('Clone sources') {
-                    steps {
-                        script {
-                            sh 'git config user.name Srdjan Obradovic'
-                            sh 'git config user.email srdjan@3ap.ch'
-                        }
-                    }
-                }
+      }
 
-        stage('General') {
-            when {
-                        expression {
-                            return isRelease
-                        }
-            }
-            steps {
-                script {
-                     try{
-                        sshagent([GIT_ID]) {
-                            sh 'mvn --batch-mode clean build-helper:parse-version release:prepare -DdevelopmentVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.nextMinorVersion}.0-SNAPSHOT release:perform -Darguments="-Dmaven.deploy.skip=true -Dmaven.javadoc.skip=true"'
-                                                 def latestTag = sh(
-                                                         returnStdout: true,
-                                                         script: 'git describe --tags `git rev-list --tags --max-count=1`'
-                                                 ).trim()
-                                                 sh 'git checkout $tag -b release/${latestTag}'
-                                                 sh 'git push -u origin release/${latestTag}'
-
-                                                 echo 'release/${latestTag}'
-
-                        }
-                     }
-                     catch(exc) {
-                     echo 'failed - cleaning up'
-                     sh 'mvn release:clean'
-                     throw (exc)
-                     }
-
-                }
-            }
+      stage('General') {
+        when {
+          expression {
+            return isRelease
+          }
         }
+        steps {
+          script {
+            try {
+              sshagent([GIT_ID]) {
+                sh 'mvn --batch-mode clean build-helper:parse-version release:prepare -DdevelopmentVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.nextMinorVersion}.0-SNAPSHOT release:perform -Darguments="-Dmaven.deploy.skip=true -Dmaven.javadoc.skip=true"'
+                def latestTag = sh(
+                  returnStdout: true,
+                  script: 'git describe --tags `git rev-list --tags --max-count=1`'
+                ).trim()
+                sh 'git checkout $tag -b release/${latestTag}'
+                sh 'git push -u origin release/${latestTag}'
 
-    post {
+                echo 'release/${latestTag}'
+
+              }
+            } catch (exc) {
+              echo 'failed - cleaning up'
+              sh 'mvn release:clean'
+              throw (exc)
+            }
+
+          }
+        }
+      }
+
+      post {
         always {
-            echo 'All ended well!'
+          echo 'All ended well!'
         }
-    }
+      }
     }
 
-}
+  }
 
 /**
  * returns true, if the last commit was created by a release build (i.e. contains "maven-release-plugin")
@@ -83,7 +82,6 @@ def wasLastCommitRelease() {
     echo "lastCommit=${lastCommit}"
     return lastCommit.contains("[maven-release-plugin]")
 }
-
 
 // pipeline {
 //     agent any
