@@ -18,44 +18,16 @@ pipeline {
         stage('Set variables') {
             steps {
                 script {
-                    // initialise the pipeline internal variables with "script" scope (they are available for all subsequent stages)
-                    // they need to be of type boolean - otherwise the conditions will still work, but unexpected
-                    // (e.g. 'false' evaluates to true in Groovy, '' evaluates to false)
                     isRelease = false
-//                     if (isMultibranchPipeline()) {
-//                         gitBranch = GIT_BRANCH
-//                     } else {
-//                         gitBranch = params.BUILD_BRANCH_NAME
-//                     }
                     if ((params.IS_RELEASE) {
                         isRelease = true
                     }
                 }
             }
-
-
-//     stage('Check commit message') {
-//         when {
-//             expression {
-//                 return wasLastCommitRelease()
-//             }
-//         }
-//         steps {
-//             script {
-//                 currentBuild.displayName = "NOT_BUILT"
-//                 currentBuild.description = 'last commit contained the string "[automated release]". Inside our multibranch pipeline, this must not trigger another build to prevent build loops.'
-//                 currentBuild.result = 'NOT_BUILT'
-//             }
-//             error('Skipping release build')
-//         }
-//     }
-
+        }
         stage('Clone sources') {
                     steps {
-                        //git credentialsId: gitCredentialsId, url: gitRepo, branch: gitBranch
                         script {
-                            //gitHash = gitShortHash().trim()
-                            //mvnVersion = getVersionFromPom('./pom.xml').trim()
                             sh 'git config user.name Srdjan Obradovic'
                             sh 'git config user.email srdjan@3ap.ch'
                         }
@@ -90,25 +62,17 @@ pipeline {
                      throw (exc)
                      }
 
-//                     echo 'Running mvn release:prepare'
-//                     sh "mvn release:clean release:prepare"
-//                     sh 'mvn release:perform -Darguments="-Dmaven.deploy.skip=true"'
-//
-//                     def latestTag = sh(
-//                         returnStdout: true,
-//                         script: 'git describe --abbrev=0 --tags'
-//                     ).trim()
-
-//                     sh "git checkout -b release/${latestTag}-TEST"
                 }
             }
         }
-    }
+
     post {
         always {
             echo 'All ended well!'
         }
     }
+    }
+
 }
 
 /**
@@ -119,3 +83,126 @@ def wasLastCommitRelease() {
     echo "lastCommit=${lastCommit}"
     return lastCommit.contains("[maven-release-plugin]")
 }
+
+
+// pipeline {
+//     agent any
+//     environment {
+//         GIT_ID = 'github-jenkins-ssh'
+//     }
+//     parameters {
+//             booleanParam(
+//                     name: 'IS_RELEASE',
+//                     description: 'Create a Maven release (false -> SNAPSHOT build)',
+//                     defaultValue: false
+//             )
+//         }
+//     tools {
+//         maven 'M3'
+//       }
+//     stages {
+//
+//         stage('Set variables') {
+//             steps {
+//                 script {
+//                     // initialise the pipeline internal variables with "script" scope (they are available for all subsequent stages)
+//                     // they need to be of type boolean - otherwise the conditions will still work, but unexpected
+//                     // (e.g. 'false' evaluates to true in Groovy, '' evaluates to false)
+//                     isRelease = false
+// //                     if (isMultibranchPipeline()) {
+// //                         gitBranch = GIT_BRANCH
+// //                     } else {
+// //                         gitBranch = params.BUILD_BRANCH_NAME
+// //                     }
+//                     if ((params.IS_RELEASE) {
+//                         isRelease = true
+//                     }
+//                 }
+//             }
+//
+//
+// //     stage('Check commit message') {
+// //         when {
+// //             expression {
+// //                 return wasLastCommitRelease()
+// //             }
+// //         }
+// //         steps {
+// //             script {
+// //                 currentBuild.displayName = "NOT_BUILT"
+// //                 currentBuild.description = 'last commit contained the string "[automated release]". Inside our multibranch pipeline, this must not trigger another build to prevent build loops.'
+// //                 currentBuild.result = 'NOT_BUILT'
+// //             }
+// //             error('Skipping release build')
+// //         }
+// //     }
+//
+//         stage('Clone sources') {
+//                     steps {
+//                         //git credentialsId: gitCredentialsId, url: gitRepo, branch: gitBranch
+//                         script {
+//                             //gitHash = gitShortHash().trim()
+//                             //mvnVersion = getVersionFromPom('./pom.xml').trim()
+//                             sh 'git config user.name Srdjan Obradovic'
+//                             sh 'git config user.email srdjan@3ap.ch'
+//                         }
+//                     }
+//                 }
+//
+//         stage('General') {
+//             when {
+//                         expression {
+//                             return isRelease
+//                         }
+//             }
+//             steps {
+//                 script {
+//                      try{
+//                         sshagent([GIT_ID]) {
+//                             sh 'mvn --batch-mode clean build-helper:parse-version release:prepare -DdevelopmentVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.nextMinorVersion}.0-SNAPSHOT release:perform -Darguments="-Dmaven.deploy.skip=true -Dmaven.javadoc.skip=true"'
+//                                                  def latestTag = sh(
+//                                                          returnStdout: true,
+//                                                          script: 'git describe --tags `git rev-list --tags --max-count=1`'
+//                                                  ).trim()
+//                                                  sh 'git checkout $tag -b release/${latestTag}'
+//                                                  sh 'git push -u origin release/${latestTag}'
+//
+//                                                  echo 'release/${latestTag}'
+//
+//                         }
+//                      }
+//                      catch(exc) {
+//                      echo 'failed - cleaning up'
+//                      sh 'mvn release:clean'
+//                      throw (exc)
+//                      }
+//
+// //                     echo 'Running mvn release:prepare'
+// //                     sh "mvn release:clean release:prepare"
+// //                     sh 'mvn release:perform -Darguments="-Dmaven.deploy.skip=true"'
+// //
+// //                     def latestTag = sh(
+// //                         returnStdout: true,
+// //                         script: 'git describe --abbrev=0 --tags'
+// //                     ).trim()
+//
+// //                     sh "git checkout -b release/${latestTag}-TEST"
+//                 }
+//             }
+//         }
+//     }
+//     post {
+//         always {
+//             echo 'All ended well!'
+//         }
+//     }
+// }
+//
+// /**
+//  * returns true, if the last commit was created by a release build (i.e. contains "maven-release-plugin")
+//  */
+// def wasLastCommitRelease() {
+//     def lastCommit = sh returnStdout: true, script: 'git log -1 --pretty=%B'
+//     echo "lastCommit=${lastCommit}"
+//     return lastCommit.contains("[maven-release-plugin]")
+// }
