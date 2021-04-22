@@ -15,21 +15,41 @@ pipeline {
       }
     stages {
 
-    stage('Check commit message') {
-        when {
-            expression {
-                return wasLastCommitRelease()
+        stage('Set variables') {
+            steps {
+                script {
+                    // initialise the pipeline internal variables with "script" scope (they are available for all subsequent stages)
+                    // they need to be of type boolean - otherwise the conditions will still work, but unexpected
+                    // (e.g. 'false' evaluates to true in Groovy, '' evaluates to false)
+                    isRelease = false
+//                     if (isMultibranchPipeline()) {
+//                         gitBranch = GIT_BRANCH
+//                     } else {
+//                         gitBranch = params.BUILD_BRANCH_NAME
+//                     }
+                    if ((params.IS_RELEASE) {
+                        isRelease = true
+                    }
+                }
             }
-        }
-        steps {
-            script {
-                currentBuild.displayName = "NOT_BUILT"
-                currentBuild.description = 'last commit contained the string "[automated release]". Inside our multibranch pipeline, this must not trigger another build to prevent build loops.'
-                currentBuild.result = 'NOT_BUILT'
-            }
-            error('Skipping release build')
-        }
-    }
+
+
+//     stage('Check commit message') {
+//         when {
+//             expression {
+//                 return wasLastCommitRelease()
+//             }
+//         }
+//         steps {
+//             script {
+//                 currentBuild.displayName = "NOT_BUILT"
+//                 currentBuild.description = 'last commit contained the string "[automated release]". Inside our multibranch pipeline, this must not trigger another build to prevent build loops.'
+//                 currentBuild.result = 'NOT_BUILT'
+//             }
+//             error('Skipping release build')
+//         }
+//     }
+
         stage('Clone sources') {
                     steps {
                         //git credentialsId: gitCredentialsId, url: gitRepo, branch: gitBranch
@@ -41,7 +61,13 @@ pipeline {
                         }
                     }
                 }
+
         stage('General') {
+            when {
+                        expression {
+                            return isRelease
+                        }
+            }
             steps {
                 script {
                      try{
@@ -91,268 +117,5 @@ pipeline {
 def wasLastCommitRelease() {
     def lastCommit = sh returnStdout: true, script: 'git log -1 --pretty=%B'
     echo "lastCommit=${lastCommit}"
-    return lastCommit.contains("[automated release]")
+    return lastCommit.contains("[maven-release-plugin]")
 }
-
-// pipeline {
-//     options {
-//         buildDiscarder(logRotator(numToKeepStr: '10'))
-//         disableConcurrentBuilds()
-//     }
-//     agent any
-//     environment {
-//         gitCredentialsId = 'axa-advice-cicd-dev-axa-ch-beratungs-services-modules-github-key'
-//         OpenShiftProjectDev = 'axa-advice-sme-dev-axa-ch'
-//         OpenShiftClusterName = 'axa-advice-sme-dev-axa-ch-private-blue'
-//         buildArtifact = 'partner-domain/target/'
-//         deployableArtifact = 'partner-domain-0.1.0.jar'
-//         //buildArtifact = 'beratungs-services-web/target/${deployableArtifact}'
-//         mvnVersion = ''
-//         projects = 'application-form-domain,consultant-domain,meeting-minutes-domain,pdsdocument-domain,activity-domain,partner-domain'
-//     }
-//     parameters {
-//         booleanParam(
-//                 name: 'IS_RELEASE',
-//                 description: 'Create a Maven release (false -> SNAPSHOT build)',
-//                 defaultValue: false
-//         )
-//         string(
-//                 name: 'BUILD_BRANCH_NAME',
-//                 description: 'Branch to be built',
-//                 defaultValue: 'development'
-//         )
-//     }
-//     stages {
-//
-//         /* stage('Maven release') {
-//             when {
-//                 expression {
-//                     return isRelease
-//                 }
-//            }
-//             steps {
-//                 script {
-//                     try {
-//                         sshagent([gitCredentialsId]) {
-//                             sh "mvn release:prepare"
-//                             mvnVersion = getReleaseVersion('release.properties').trim()
-//                             sh 'mvn release:perform -Darguments="-Dmaven.deploy.skip=true -Dmaven.repo.local=/var/lib/jenkins/wd/.m2" -PapiDocs'
-//                             // unfortunately, the release build copies the required jars of our openshift profile to a
-//                             // destination, where they won't be found by the "Build Image Openshift" stage
-//                             // => triggger copy of the .jars to the expected (and usual) place (cicd/modules/...)
-//                             sh "mvn process-resources -Dmaven.repo.local=/var/lib/jenkins/wd/.m2 -Popenshift"
-//                             // also our .war file is in a different location; copy it to the place expected by "Build Image OpenShift"
-//                             sh "cp -afv target/checkout/beratungs-services-web/target/beratungs-services-web.war ${buildArtifact}"
-//                         }
-//                     }
-//                      catch(exc){
-//                         echo 'Release failed - cleaning up'
-//                         sh 'mvn release:clean'
-//                         throw (exc)
-//                     }
-//                 }
-//             }
-//         } */
-//         stage('Release:prepare') {
-//             when {
-//                 expression {
-//                     return true
-//                 }
-//             }
-//             steps {
-//                 script {
-//                     try {
-//                         sshagent([gitCredentialsId]) {
-//                             //sh "mvn --batch-mode -Dtag=beratungs-services-modules.0.1.0 release:prepare -DreleaseVersion=0.1.0 -DdevelopmentVersion=0.2.0-SNAPSHOT -DskipTests"
-//                             sh "mvn release:prepare"
-//                             mvnVersion = getReleaseVersion('release.properties').trim()
-//                             echo 'Release prepare'
-//                         }
-//                     }
-//                     catch (exc) {
-//                         echo 'Release prepare failed - clean up'
-//                         sh 'mvn release:clean'
-//                         throw (exc)
-//                     }
-//                 }
-//             }
-//         }
-//         stage('Release:perform') {
-//             when {
-//                 expression {
-//                     return true
-//                 }
-//             }
-//             steps {
-//                 script {
-//                     try {
-//                         sshagent([gitCredentialsId]) {
-//                             sh 'mvn release:perform -Darguments="-Dmaven.deploy.skip=true -Dmaven.repo.local=/var/lib/jenkins/wd/.m2" -PapiDocs'
-//                             //sh 'mvn --projects ${projects} release:perform -Darguments="-Dmaven.deploy.skip=true -Dmaven.repo.local=/var/lib/jenkins/wd/.m2" -PapiDocs'
-//                             // unfortunately, the release build copies the required jars of our openshift profile to a
-//                             // destination, where they won't be found by the "Build Image Openshift" stage
-//                             // => triggger copy of the .jars to the expected (and usual) place (cicd/modules/...)
-//                             sh "mvn --projects ${projects} process-resources -Dmaven.repo.local=/var/lib/jenkins/wd/.m2 -Popenshift"
-//                             // also our .war file is in a different location; copy it to the place expected by "Build Image OpenShift"
-//                             //????????????????
-//                             sh "cp -afv target/checkout/beratungs-services-web/target/beratungs-services-web.war ${buildArtifact}"
-//                         }
-//                     }
-//                     catch (exc) {
-//                         echo 'Release perform failed - clean up'
-//                         sh 'mvn release:clean'
-//                         throw (exc)
-//                     }
-//                 }
-//             }
-//         }
-//         stage('Maven build & unit tests') {
-//             steps {
-//                 sshagent([gitCredentialsId]) {
-//                     sh "mvn --projects ${projects} --also-make package -Dmaven.repo.local=/var/lib/jenkins/wd/.m2"
-//                 }
-//             }
-//         }
-//         stage('Create git tag') {
-//             when {
-//                 expression {
-//                     return isDevelopmentBranch()
-//                 }
-//             }
-//             steps {
-//                 script {
-//                     def latestTag = sh(
-//                             returnStdout: true,
-//                             script: 'git describe --abbrev=0 --tags'
-//                     ).trim()
-//                     def (_, major, minor, patch) = (latestTag =~ /(\d+)\.(\d+)\.(\d+)/)[0]
-//                     nextTag = "${major}.${minor}.${(patch.toInteger() + 1)}"
-//                     echo "latest git tag: ${latestTag}"
-//                     echo "create git tag ${nextTag}"
-//                     sshagent([gitCredentialsId]) {
-//                         sh "git tag -f ${nextTag}"
-//                         sh "git push -f origin ${nextTag}"
-//                     }
-//                 }
-//             }
-//         }
-//         stage('Create git release tag') {
-//             when {
-//                 expression {
-//                     return isRelease
-//                 }
-//             }
-//             steps {
-//                 script {
-//                     def latestTag = sh(
-//                             returnStdout: true,
-//                             script: 'git describe --abbrev=0 --tags'
-//                     ).trim()
-//                     def (_, major, minor, patch) = (latestTag =~ /(\d+)\.(\d+)\.(\d+)/)[0]
-//                     nextTag = "${major}.${(minor.toInteger() + 1)}.0"
-//                     echo "latest git tag: ${latestTag}"
-//                     echo "create git tag ${nextTag}"
-//                     sshagent([gitCredentialsId]) {
-//                         sh "git tag -f ${nextTag}"
-//                         sh "git push -f origin ${nextTag}"
-//                     }
-//                 }
-//             }
-//         }
-//         stage('Deploy all domains') {
-//             when {
-//                 expression {
-//                     //return isDevelopmentBranch()
-//                     return false
-//                 }
-//             }
-//             steps {
-//                 script {
-//                     //run_s2i_build(['activity-domain', 'application-form-domain', 'consultant-domain', 'meeting-minutes-domain', 'partner-domain', 'pdsdocument-domain'], nextTag)
-//                     //slackSend(color: 'good', message: "Microservices ${nextTag} successfully deployed.", channel: "#qa-sme")
-//                 }
-//             }
-//         }
-//         post {
-//             success {
-//                 //slackSend(color: 'good', message: "Build - ${JOB_NAME} ${BUILD_NUMBER} successful. (<${BUILD_URL}|Open output>)", channel: "#jenkins-sme")
-//                 echo 'BUILD SUCCESSFUL.'
-//             }
-//             failure {
-//                 //slackSend(color: '#FF0000', message: ":warning: Build - ${JOB_NAME} ${BUILD_NUMBER} failed! (<${BUILD_URL}|Open output>) :warning:", channel: "#jenkins-sme")
-//                 echo 'BUILD FAILED!'
-//             }
-//         }
-//     }
-// }
-//     def run_mvn_release_plugin() {
-//     }
-//     def run_s2i_build(domains, nextTag) {
-//         def buildConfig = ["activity-domain"        : "sme-activity",
-//                            "application-form-domain": "sme-application-form",
-//                            "consultant-domain"      : "sme-consultant",
-//                            "meeting-minutes-domain" : "sme-meeting-minutes",
-//                            "partner-domain"         : "sme-partner",
-//                            "pdsdocument-domain"     : "sme-pdsdocument"]
-//         domains.each { domain ->
-//             openshift.withCluster(OpenShiftClusterName) {
-//                 openshift.withProject(OpenShiftProjectDev) {
-//                     echo "start build for ${domain}"
-//                     def bc = openshift.selector("bc", "${buildConfig.get(domain)}")
-//                     bc.startBuild("--from-file=${domain}/target/${domain}-0.0.1-SNAPSHOT.jar")
-//                     timeout(time: 4, unit: 'MINUTES') {
-//                         bc.logs('-f')
-//                     }
-//                     def lastVersion = bc.object().status.lastVersion
-//                     def pod = openshift.selector('pod', "${buildConfig.get(domain)}-${lastVersion}-build")
-//                     def status = waitForTermination(pod)
-//                     if (status == 'Failed') {
-//                         error('build failed')
-//                     }
-//                     echo "tagging ${buildConfig.get(domain)}:latest -> ${buildConfig.get(domain)}:${nextTag}"
-//                     openshift.tag("${buildConfig.get(domain)}:latest", "${buildConfig.get(domain)}:${nextTag}")
-//                 }
-//             }
-//         }
-//     }
-// /**
-//  * returns true, if this build is our multibranch pipeline
-//  */
-//     def isMultibranchPipeline() {
-//         // in a multibranch pipeline build, the GIT_BRANCH just contains the branch name
-//         // in a simple pipeline, it is "origin/branch-name"
-//         return !GIT_BRANCH.startsWith("origin/")
-//     }
-// /**
-//  * waits for certain termination statuses and returns the status
-//  * @return termination status
-//  */
-//     def waitForTermination(pod) {
-//         def status
-//         pod.untilEach(1) {
-//             echo "pod, it.object().status.phase=${it.object().status.phase}"
-//             status = it.object().status.phase
-//             return it.object().status.phase == "Complete" || it.object().status.phase == 'Succeeded' || it.object().status.phase == "Failed"
-//         }
-//         echo "status=${status}"
-//         return status
-//     }
-// // Convenience Functions to read variables from the pom.xml
-// // Do not change anything below this line.
-// // --------------------------------------------------------
-//     def getVersionFromPom(pomfile) {
-//         def pom = readMavenPom file: pomfile
-//         return pom.version
-//     }
-//     def getReleaseVersion(releaseFile) {
-//         def props = readProperties file: releaseFile
-//         return props['project.rel.com.axa.ch.bers:beratungs-services-modules']
-//         // TODO beratungs-services-modules
-//     }
-// /**
-//  * returns true, if this build is development branch
-//  */
-//     def isDevelopmentBranch() {
-//         //return env.JOB_NAME.endsWith("/development")
-//         return JOB_NAME.endsWith("/development")
-//     }
