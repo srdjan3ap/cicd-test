@@ -2,269 +2,234 @@ pipeline {
   agent any
   environment {
     GIT_ID = 'github-jenkins-ssh'
+     // all environment variables have the type "String" (also 'isRelease = false')
+            gitCredentialsId = 'github-jenkins-ssh'
+            OpenShiftProjectDev = 'axa-advice-sme-dev-axa-ch'
+            OpenShiftClusterName = 'axa-advice-sme-dev-axa-ch-private-blue'
+            mvnVersion = ''
+            projects = 'application-form-domain,consultant-domain,meeting-minutes-domain,pdsdocument-domain,activity-domain,partner-domain'
+
   }
   parameters {
-    booleanParam(
-      name: 'IS_RELEASE',
-      description: 'Create a Maven release (false -> SNAPSHOT build)',
-      defaultValue: false
-    )
-  }
+          booleanParam(
+                  name: 'IS_RELEASE',
+                  description: 'Create a Maven release (false -> SNAPSHOT build)',
+                  defaultValue: false
+          )
+          string(
+                  name: 'BUILD_BRANCH_NAME',
+                  description: 'Branch to be built',
+                  defaultValue: 'development'
+          )
+      }
   tools {
     maven 'M3'
   }
-  stages {
-
-  stage('Check commit message') {
-              when {
-                  expression {
-                      return wasLastCommitRelease() && isDevelopmentBranchInMultibranchPipeline()
-                  }
-              }
-              steps {
-                  script {
-                      currentBuild.displayName = "NOT_BUILT"
-                      currentBuild.description = 'last commit contained the string "[maven-release-build]". Inside our multibranch pipeline, this must not trigger another build to prevent build loops on development branch.'
-                      currentBuild.result = 'NOT_BUILT'
-                  }
-                  error('Skipping release build')
-              }
-          }
-
-    stage('Set variables') {
-      steps {
-        script {
-          isRelease = false
-          if (params.IS_RELEASE) {
-              isRelease = true
-            }
-          }
-        }
-      }
-      stage('Clone sources') {
-        steps {
-          script {
-            sh 'git config user.name Srdjan Obradovic'
-            sh 'git config user.email srdjan@3ap.ch'
-          }
-        }
-      }
-
-      stage('Maven build') {
-                  when {
-                      not {
-                          expression {
-                              return isRelease
-                          }
-                      }
-                  }
-                  steps {
+ stages {
+         stage('Check commit message') {
+             when {
+                 expression {
+                     return wasLastCommitRelease()
+                 }
+             }
+             steps {
+                 script {
+                     currentBuild.displayName = "NOT_BUILT"
+                     currentBuild.description = 'last commit contained the string "[maven-release-build]". Inside our multibranch pipeline, this must not trigger another build to prevent build loops on development branch.'
+                     currentBuild.result = 'NOT_BUILT'
+                 }
+                 error('Skipping release build')
+             }
+         }
+         stage('Set variables') {
+             steps {
+                 script {
+                     // initialise the pipeline internal variables with "script" scope (they are available for all subsequent stages)
+                     // they need to be of type boolean - otherwise the conditions will still work, but unexpected
+                     // (e.g. 'false' evaluates to true in Groovy, '' evaluates to false)
+                     isRelease = false
+                     if (isMultibranchPipeline()) {
+                         gitBranch = GIT_BRANCH
+                     } else {
+                         gitBranch = params.BUILD_BRANCH_NAME
+                     }
+                     if ((isDevelopmentBranch()) || params.IS_RELEASE) {
+                         isRelease = true
+                     }
+                     sh 'git config --global user.email "axa.advice@axa.ch"'
+                     sh 'git config --global user.name "axa-ch-advice-machine-user"'
+                     // fix "detached HEAD" state
+                     sh "git checkout ${gitBranch}"
+                 }
+             }
+         }
+         stage('Release') {
+             when {
+                 expression {
+                     return isRelease
+                 }
+             }
+             steps {
+                 script {
+                     try {
                          sshagent([gitCredentialsId]) {
-                              sh "mvn clean verify "
+                             sh 'mvn --batch-mode clean build-helper:parse-version release:prepare -DdevelopmentVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.nextMinorVersion}.0-SNAPSHOT release:perform -Darguments="-Dmaven.deploy.skip=true -Dmaven.javadoc.skip=true"'
+                             def latestTag = sh(
+                                     returnStdout: true,
+                                     script: 'git describe --tags `git rev-list --tags --max-count=1`'
+                             ).trim()
+                             sh 'git checkout $tag -b release/${latestTag}'
+                             sh 'git push -u origin release/${latestTag}'
+                             echo 'release/${latestTag}'
                          }
-                  }
-              }
-
-      stage('Update version and tag') {
-              when {
-                expression {
-                  return isRelease
-                }
-              }
-              steps {
-                script {
-                  try {
-                    sshagent([GIT_ID]) {
-                      sh 'mvn build-helper:parse-version versions:set -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion}-SNAPSHOT versions:commit -Dmessage="[automated-commit] Incremented patch version" scm:checkin'
-                      VERSION = readMavenPom().getVersion()
-                      def latestTag = sh(
-                        returnStdout: true,
-                        script: 'git describe --tags `git rev-list --tags --max-count=1`'
-                      ).trim()
-                      sh 'git checkout $tag -b release/${latestTag}'
-                      sh 'git push -u origin release/${latestTag}'
-
-                      echo 'release/${latestTag}'
-
-                    }
-                  } catch (exc) {
-                    echo 'failed - cleaning up'
-                    sh 'mvn release:clean'
-                    throw (exc)
-                  }
-
-                }
-              }
-            }
-
-
-      stage('Release') {
-        when {
-          expression {
-            return isRelease
-          }
-        }
-        steps {
-          script {
-            try {
-              sshagent([GIT_ID]) {
-                sh 'mvn --batch-mode clean build-helper:parse-version release:prepare -DdevelopmentVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.nextMinorVersion}.0-SNAPSHOT release:perform -Darguments="-Dmaven.deploy.skip=true -Dmaven.javadoc.skip=true"'
-                def latestTag = sh(
-                  returnStdout: true,
-                  script: 'git describe --tags `git rev-list --tags --max-count=1`'
-                ).trim()
-                sh 'git checkout $tag -b release/${latestTag}'
-                sh 'git push -u origin release/${latestTag}'
-
-                echo 'release/${latestTag}'
-
-              }
-            } catch (exc) {
-              echo 'failed - cleaning up'
-              sh 'mvn release:clean'
-              throw (exc)
-            }
-
-          }
-        }
-      }
-  }
-}
-/**
- * returns true, if the last commit was created by a release build (i.e. contains "maven-release-plugin")
- */
-def wasLastCommitRelease() {
-    def lastCommit = sh returnStdout: true, script: 'git log -1 --pretty=%B'
-    echo "lastCommit=${lastCommit}"
-    return lastCommit.contains("[maven-release-plugin]")
-}
-/**
- * returns true, if this build is our multibranch pipeline + branch to be built is "development"
- */
-def isDevelopmentBranchInMultibranchPipeline() {
-    // in a multibranch pipeline build, the JOB_NAME follows the pattern "JOB_NAME"/"BRANCH_NAME"
-    // in a simple pipeline, it is ["FOLDER_NAME"/]"JOB_NAME"
-    return env.JOB_NAME.endsWith("/development")
-}
-
-// pipeline {
-//     agent any
-//     environment {
-//         GIT_ID = 'github-jenkins-ssh'
-//     }
-//     parameters {
-//             booleanParam(
-//                     name: 'IS_RELEASE',
-//                     description: 'Create a Maven release (false -> SNAPSHOT build)',
-//                     defaultValue: false
-//             )
-//         }
-//     tools {
-//         maven 'M3'
-//       }
-//     stages {
-//
-//         stage('Set variables') {
-//             steps {
-//                 script {
-//                     // initialise the pipeline internal variables with "script" scope (they are available for all subsequent stages)
-//                     // they need to be of type boolean - otherwise the conditions will still work, but unexpected
-//                     // (e.g. 'false' evaluates to true in Groovy, '' evaluates to false)
-//                     isRelease = false
-// //                     if (isMultibranchPipeline()) {
-// //                         gitBranch = GIT_BRANCH
-// //                     } else {
-// //                         gitBranch = params.BUILD_BRANCH_NAME
-// //                     }
-//                     if ((params.IS_RELEASE) {
-//                         isRelease = true
-//                     }
-//                 }
-//             }
-//
-//
-// //     stage('Check commit message') {
-// //         when {
-// //             expression {
-// //                 return wasLastCommitRelease()
-// //             }
-// //         }
-// //         steps {
-// //             script {
-// //                 currentBuild.displayName = "NOT_BUILT"
-// //                 currentBuild.description = 'last commit contained the string "[automated release]". Inside our multibranch pipeline, this must not trigger another build to prevent build loops.'
-// //                 currentBuild.result = 'NOT_BUILT'
-// //             }
-// //             error('Skipping release build')
-// //         }
-// //     }
-//
-//         stage('Clone sources') {
-//                     steps {
-//                         //git credentialsId: gitCredentialsId, url: gitRepo, branch: gitBranch
-//                         script {
-//                             //gitHash = gitShortHash().trim()
-//                             //mvnVersion = getVersionFromPom('./pom.xml').trim()
-//                             sh 'git config user.name Srdjan Obradovic'
-//                             sh 'git config user.email srdjan@3ap.ch'
-//                         }
-//                     }
-//                 }
-//
-//         stage('General') {
-//             when {
-//                         expression {
-//                             return isRelease
-//                         }
-//             }
-//             steps {
-//                 script {
-//                      try{
-//                         sshagent([GIT_ID]) {
-//                             sh 'mvn --batch-mode clean build-helper:parse-version release:prepare -DdevelopmentVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.nextMinorVersion}.0-SNAPSHOT release:perform -Darguments="-Dmaven.deploy.skip=true -Dmaven.javadoc.skip=true"'
-//                                                  def latestTag = sh(
-//                                                          returnStdout: true,
-//                                                          script: 'git describe --tags `git rev-list --tags --max-count=1`'
-//                                                  ).trim()
-//                                                  sh 'git checkout $tag -b release/${latestTag}'
-//                                                  sh 'git push -u origin release/${latestTag}'
-//
-//                                                  echo 'release/${latestTag}'
-//
-//                         }
-//                      }
-//                      catch(exc) {
-//                      echo 'failed - cleaning up'
-//                      sh 'mvn release:clean'
-//                      throw (exc)
-//                      }
-//
-// //                     echo 'Running mvn release:prepare'
-// //                     sh "mvn release:clean release:prepare"
-// //                     sh 'mvn release:perform -Darguments="-Dmaven.deploy.skip=true"'
-// //
-// //                     def latestTag = sh(
-// //                         returnStdout: true,
-// //                         script: 'git describe --abbrev=0 --tags'
-// //                     ).trim()
-//
-// //                     sh "git checkout -b release/${latestTag}-TEST"
-//                 }
-//             }
-//         }
-//     }
-//     post {
-//         always {
-//             echo 'All ended well!'
-//         }
-//     }
-// }
-//
-// /**
-//  * returns true, if the last commit was created by a release build (i.e. contains "maven-release-plugin")
-//  */
-// def wasLastCommitRelease() {
-//     def lastCommit = sh returnStdout: true, script: 'git log -1 --pretty=%B'
-//     echo "lastCommit=${lastCommit}"
-//     return lastCommit.contains("[maven-release-plugin]")
-// }
+                     } catch(exc) {
+                         echo 'failed - cleaning up'
+                         sh 'mvn release:clean'
+                         throw (exc)
+                     }
+                 }
+             }
+             stage('Build') {
+                 when {
+                     not {
+                         expression {
+                             return isRelease
+                         }
+                     }
+                 }
+                 steps {
+                     script {
+                         sh "mvn --projects ${projects} --also-make package -Dmaven.repo.local=/var/lib/jenkins/wd/.m2"
+                     }
+                 }
+             }
+             stage('Update versions and tag - SNAPSHOT') {
+                 when {
+                     not {
+                         expression {
+                             return isRelease
+                         }
+                     }
+                 }
+                 steps {
+                     script {
+                         sh 'mvn build-helper:parse-version versions:set -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion}-\\\${parsedVersion.qualifier} versions:commit -Dmessage="[automated-commit] Incremented patch version" scm:checkin scm:tag -Dtag=\\\${project.version}'
+                     }
+                 }
+             }
+             stage('Update versions and tag - RELEASE FIX') {
+                 when {
+                     expression {
+                         return !isRelease && isReleaseBranch()
+                     }
+                 }
+                 steps {
+                     script {
+                         sh 'mvn build-helper:parse-version versions:set -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion} versions:commit -Dmessage="[automated-commit] Incremented patch version" scm:checkin scm:tag -Dtag=\\\${project.version}'
+                     }
+                 }
+             }
+             stage('Deploy all domains') {
+                 when {
+                     expression {
+                             return isDevelopmentBranch() || isReleaseBranch()
+                         }
+                 }
+                 steps {
+                     script {
+//                          def projectVersion = getVersionFromPom()
+//                          run_s2i_build(['activity-domain', 'application-form-domain', 'consultant-domain', 'meeting-minutes-domain', 'partner-domain', 'pdsdocument-domain'], projectVersion)
+//                          slackSend(color: 'good', message: "Microservices ${projectVersion} successfully deployed.", channel: "#qa-sme")
+                     }
+                 }
+             }
+             post {
+                 success {
+//                      slackSend(color: 'good', message: "Build - ${JOB_NAME} ${BUILD_NUMBER} successful. (<${BUILD_URL}|Open output>)", channel: "#jenkins-sme")
+                      echo 'BUILD SUCCESSFUL.'
+                 }
+                 failure {
+//                      slackSend(color: '#FF0000', message: ":warning: Build - ${JOB_NAME} ${BUILD_NUMBER} failed! (<${BUILD_URL}|Open output>) :warning:", channel: "#jenkins-sme")
+                     echo 'BUILD FAILED!'
+                 }
+             }
+         }
+     }
+ }
+ def run_s2i_build(domains, projectVersion) {
+     def buildConfig = ["activity-domain"        : "sme-activity",
+                        "application-form-domain": "sme-application-form",
+                        "consultant-domain"      : "sme-consultant",
+                        "meeting-minutes-domain" : "sme-meeting-minutes",
+                        "partner-domain"         : "sme-partner",
+                        "pdsdocument-domain"     : "sme-pdsdocument"]
+     domains.each { domain ->
+         openshift.withCluster(OpenShiftClusterName) {
+             openshift.withProject(OpenShiftProjectDev) {
+                 echo "start build for ${domain}"
+                 def bc = openshift.selector("bc", "${buildConfig.get(domain)}")
+                 bc.startBuild("--from-file=${domain}/target/${domain}-${projectVersion}.jar")
+                 timeout(time: 4, unit: 'MINUTES') {
+                     bc.logs('-f')
+                 }
+                 def lastVersion = bc.object().status.lastVersion
+                 def pod = openshift.selector('pod', "${buildConfig.get(domain)}-${lastVersion}-build")
+                 def status = waitForTermination(pod)
+                 if (status == 'Failed') {
+                     error('build failed')
+                 }
+                 echo "tagging ${buildConfig.get(domain)}:latest -> ${buildConfig.get(domain)}:${projectVersion}"
+                 openshift.tag("${buildConfig.get(domain)}:latest", "${buildConfig.get(domain)}:${projectVersion}")
+             }
+         }
+     }
+ }
+ /**
+  * returns true, if the last commit was created by a release build (i.e. contains "maven-release-plugin")
+  */
+ def wasLastCommitRelease() {
+     def lastCommit = sh returnStdout: true, script: 'git log -1 --pretty=%B'
+     echo "lastCommit=${lastCommit}"
+     return lastCommit.contains("[maven-release-plugin]")
+ }
+ /**
+  * returns true, if this build is our multibranch pipeline + branch to be built is "development"
+  */
+ def isDevelopmentBranchInMultibranchPipeline() {
+     // in a multibranch pipeline build, the JOB_NAME follows the pattern "JOB_NAME"/"BRANCH_NAME"
+     // in a simple pipeline, it is ["FOLDER_NAME"/]"JOB_NAME"
+     return env.JOB_NAME.endsWith("/develop")
+ }
+ /**
+  * returns true, if this build is our multibranch pipeline
+  */
+ def isMultibranchPipeline() {
+     // in a multibranch pipeline build, the GIT_BRANCH just contains the branch name
+     // in a simple pipeline, it is "origin/branch-name"
+     return !GIT_BRANCH.startsWith("origin/")
+ }
+ /**
+  * returns true, if this build is our multibranch pipeline
+  */
+ def isReleaseBranch() {
+     // in a multibranch pipeline build, the GIT_BRANCH just contains the branch name
+     // in a simple pipeline, it is "origin/branch-name"
+     return GIT_BRANCH.startsWith("release/")
+ }
+ // Convenience Functions to read variables from the pom.xml
+ // Do not change anything below this line.
+ // --------------------------------------------------------
+ def getVersionFromPom() {
+     def pom = readMavenPom file: 'pom.xml'
+     return pom.version
+ }
+ def getReleaseVersion(releaseFile) {
+     def props = readProperties file: releaseFile
+     return props['project.rel.com.axa.ch.bers:beratungs-services']
+ }
+ /**
+  * returns true, if this build is development branch
+  */
+ def isDevelopmentBranch() {
+     return JOB_NAME.endsWith("/development")
+ }
