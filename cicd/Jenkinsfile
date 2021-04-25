@@ -2,203 +2,203 @@ pipeline {
   agent any
   environment {
     GIT_ID = 'github-jenkins-ssh'
-     // all environment variables have the type "String" (also 'isRelease = false')
-            gitCredentialsId = 'github-jenkins-ssh'
-            OpenShiftProjectDev = 'axa-advice-sme-dev-axa-ch'
-            OpenShiftClusterName = 'axa-advice-sme-dev-axa-ch-private-blue'
-            mvnVersion = ''
-            projects = 'application-form-domain,consultant-domain,meeting-minutes-domain,pdsdocument-domain,activity-domain,partner-domain'
+    // all environment variables have the type "String" (also 'isRelease = false')
+    gitCredentialsId = 'github-jenkins-ssh'
+    OpenShiftProjectDev = 'axa-advice-sme-dev-axa-ch'
+    OpenShiftClusterName = 'axa-advice-sme-dev-axa-ch-private-blue'
+    mvnVersion = ''
+    projects = 'application-form-domain,consultant-domain,meeting-minutes-domain,pdsdocument-domain,activity-domain,partner-domain'
 
   }
   parameters {
-          booleanParam(
-                  name: 'IS_RELEASE',
-                  description: 'Create a Maven release (false -> SNAPSHOT build)',
-                  defaultValue: false
-          )
-          string(
-                  name: 'BUILD_BRANCH_NAME',
-                  description: 'Branch to be built',
-                  defaultValue: 'development'
-          )
-      }
+    booleanParam(
+      name: 'IS_RELEASE',
+      description: 'Create a Maven release (false -> SNAPSHOT build)',
+      defaultValue: false
+    )
+    string(
+      name: 'BUILD_BRANCH_NAME',
+      description: 'Branch to be built',
+      defaultValue: 'development'
+    )
+  }
   tools {
     maven 'M3'
   }
- stages {
-         stage('Check commit message') {
-             when {
-                 expression {
-                     return wasLastCommitRelease()
-                 }
-             }
-             steps {
-                 script {
-                     currentBuild.displayName = "NOT_BUILT"
-                     currentBuild.description = 'last commit contained the string "[maven-release-build]". Inside our multibranch pipeline, this must not trigger another build to prevent build loops on development branch.'
-                     currentBuild.result = 'NOT_BUILT'
-                 }
-                 error('Skipping release build')
-             }
-         }
-         stage('Set variables') {
-             steps {
-                 script {
-                     // initialise the pipeline internal variables with "script" scope (they are available for all subsequent stages)
-                     // they need to be of type boolean - otherwise the conditions will still work, but unexpected
-                     // (e.g. 'false' evaluates to true in Groovy, '' evaluates to false)
-                     isRelease = false
-                     if (isMultibranchPipeline()) {
-                         gitBranch = GIT_BRANCH
-                     } else {
-                         gitBranch = params.BUILD_BRANCH_NAME
-                     }
-                     if ((isDevelopmentBranch()) || params.IS_RELEASE) {
-                         isRelease = true
-                     }
-                     sh 'git config --global user.email "axa.advice@axa.ch"'
-                     sh 'git config --global user.name "axa-ch-advice-machine-user"'
-                     // fix "detached HEAD" state
-                     sh "git checkout ${gitBranch}"
-                 }
-             }
-         }
-         stage('Release') {
-             when {
-                 expression {
-                     return isRelease
-                 }
-             }
-             steps {
-                 script {
-                     try {
-                         sshagent([gitCredentialsId]) {
-                             sh 'mvn --batch-mode clean build-helper:parse-version release:prepare -DdevelopmentVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.nextMinorVersion}.0-SNAPSHOT release:perform -Darguments="-Dmaven.deploy.skip=true -Dmaven.javadoc.skip=true"'
-                             def latestTag = sh(
-                                     returnStdout: true,
-                                     script: 'git describe --tags `git rev-list --tags --max-count=1`'
-                             ).trim()
-                             sh 'git checkout $tag -b release/${latestTag}'
-                             sh 'git push -u origin release/${latestTag}'
-                             echo 'release/${latestTag}'
-                         }
-                     } catch(exc) {
-                         echo 'failed - cleaning up'
-                         sh 'mvn release:clean'
-                         throw (exc)
-                     }
-                 }
-             }
-             stage('Build') {
-                 when {
-                     not {
-                         expression {
-                             return isRelease
-                         }
-                     }
-                 }
-                 steps {
-                     script {
-                         sh "mvn --projects ${projects} --also-make package -Dmaven.repo.local=/var/lib/jenkins/wd/.m2"
-                     }
-                 }
-             }
-             stage('Update versions and tag - SNAPSHOT') {
-                 when {
-                     not {
-                         expression {
-                             return isRelease
-                         }
-                     }
-                 }
-                 steps {
-                     script {
-                         sh 'mvn build-helper:parse-version versions:set -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion}-\\\${parsedVersion.qualifier} versions:commit -Dmessage="[automated-commit] Incremented patch version" scm:checkin scm:tag -Dtag=\\\${project.version}'
-                     }
-                 }
-             }
-             stage('Update versions and tag - RELEASE FIX') {
-                 when {
-                     expression {
-                         return !isRelease && isReleaseBranch()
-                     }
-                 }
-                 steps {
-                     script {
-                         sh 'mvn build-helper:parse-version versions:set -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion} versions:commit -Dmessage="[automated-commit] Incremented patch version" scm:checkin scm:tag -Dtag=\\\${project.version}'
-                     }
-                 }
-             }
-             stage('Deploy all domains') {
-                 when {
-                     expression {
-                             return isDevelopmentBranch() || isReleaseBranch()
-                         }
-                 }
-                 steps {
-                     script {
+  stages {
+    stage('Check commit message') {
+      when {
+        expression {
+          return wasLastCommitRelease()
+        }
+      }
+      steps {
+        script {
+          currentBuild.displayName = "NOT_BUILT"
+          currentBuild.description = 'last commit contained the string "[maven-release-build]". Inside our multibranch pipeline, this must not trigger another build to prevent build loops on development branch.'
+          currentBuild.result = 'NOT_BUILT'
+        }
+        error('Skipping release build')
+      }
+    }
+    stage('Set variables') {
+      steps {
+        script {
+          // initialise the pipeline internal variables with "script" scope (they are available for all subsequent stages)
+          // they need to be of type boolean - otherwise the conditions will still work, but unexpected
+          // (e.g. 'false' evaluates to true in Groovy, '' evaluates to false)
+          isRelease = false
+          if (isMultibranchPipeline()) {
+            gitBranch = GIT_BRANCH
+          } else {
+            gitBranch = params.BUILD_BRANCH_NAME
+          }
+          if ((isDevelopmentBranch()) || params.IS_RELEASE) {
+            isRelease = true
+          }
+          sh 'git config --global user.email "axa.advice@axa.ch"'
+          sh 'git config --global user.name "axa-ch-advice-machine-user"'
+          // fix "detached HEAD" state
+          sh "git checkout ${gitBranch}"
+        }
+      }
+    }
+    stage('Release') {
+      when {
+        expression {
+          return isRelease
+        }
+      }
+      steps {
+        script {
+          try {
+            sshagent([gitCredentialsId]) {
+              sh 'mvn --batch-mode clean build-helper:parse-version release:prepare -DdevelopmentVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.nextMinorVersion}.0-SNAPSHOT release:perform -Darguments="-Dmaven.deploy.skip=true -Dmaven.javadoc.skip=true"'
+              def latestTag = sh(
+                returnStdout: true,
+                script: 'git describe --tags `git rev-list --tags --max-count=1`'
+              ).trim()
+              sh 'git checkout $tag -b release/${latestTag}'
+              sh 'git push -u origin release/${latestTag}'
+              echo 'release/${latestTag}'
+            }
+          } catch (exc) {
+            echo 'failed - cleaning up'
+            sh 'mvn release:clean'
+            throw (exc)
+          }
+        }
+      }
+      stage('Build') {
+        when {
+          not {
+            expression {
+              return isRelease
+            }
+          }
+        }
+        steps {
+          script {
+            sh "mvn --projects ${projects} --also-make package -Dmaven.repo.local=/var/lib/jenkins/wd/.m2"
+          }
+        }
+      }
+      stage('Update versions and tag - SNAPSHOT') {
+        when {
+          not {
+            expression {
+              return isRelease
+            }
+          }
+        }
+        steps {
+          script {
+            sh 'mvn build-helper:parse-version versions:set -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion}-\\\${parsedVersion.qualifier} versions:commit -Dmessage="[automated-commit] Incremented patch version" scm:checkin scm:tag -Dtag=\\\${project.version}'
+          }
+        }
+      }
+      stage('Update versions and tag - RELEASE FIX') {
+        when {
+          expression {
+            return !isRelease && isReleaseBranch()
+          }
+        }
+        steps {
+          script {
+            sh 'mvn build-helper:parse-version versions:set -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion} versions:commit -Dmessage="[automated-commit] Incremented patch version" scm:checkin scm:tag -Dtag=\\\${project.version}'
+          }
+        }
+      }
+      stage('Deploy all domains') {
+        when {
+          expression {
+            return isDevelopmentBranch() || isReleaseBranch()
+          }
+        }
+        steps {
+          script {
 
-                     }
-                 }
-             }
-             post {
-                 success {
-   echo 'BUILD SUCCESSFUL.'
-                 }
-                 failure {
-                  echo 'BUILD FAILED!'
-                 }
-             }
-         }
-     }
- }
+          }
+        }
+      }
+      post {
+        success {
+          echo 'BUILD SUCCESSFUL.'
+        }
+        failure {
+          echo 'BUILD FAILED!'
+        }
+      }
+    }
+  }
+}
 
- /**
-  * returns true, if the last commit was created by a release build (i.e. contains "maven-release-plugin")
-  */
- def wasLastCommitRelease() {
-     def lastCommit = sh returnStdout: true, script: 'git log -1 --pretty=%B'
-     echo "lastCommit=${lastCommit}"
-     return lastCommit.contains("[maven-release-plugin]")
- }
- /**
-  * returns true, if this build is our multibranch pipeline + branch to be built is "development"
-  */
- def isDevelopmentBranchInMultibranchPipeline() {
-     // in a multibranch pipeline build, the JOB_NAME follows the pattern "JOB_NAME"/"BRANCH_NAME"
-     // in a simple pipeline, it is ["FOLDER_NAME"/]"JOB_NAME"
-     return env.JOB_NAME.endsWith("/develop")
- }
- /**
-  * returns true, if this build is our multibranch pipeline
-  */
- def isMultibranchPipeline() {
-     // in a multibranch pipeline build, the GIT_BRANCH just contains the branch name
-     // in a simple pipeline, it is "origin/branch-name"
-     return !GIT_BRANCH.startsWith("origin/")
- }
- /**
-  * returns true, if this build is our multibranch pipeline
-  */
- def isReleaseBranch() {
-     // in a multibranch pipeline build, the GIT_BRANCH just contains the branch name
-     // in a simple pipeline, it is "origin/branch-name"
-     return GIT_BRANCH.startsWith("release/")
- }
- // Convenience Functions to read variables from the pom.xml
- // Do not change anything below this line.
- // --------------------------------------------------------
- def getVersionFromPom() {
-     def pom = readMavenPom file: 'pom.xml'
-     return pom.version
- }
- def getReleaseVersion(releaseFile) {
-     def props = readProperties file: releaseFile
-     return props['project.rel.com.axa.ch.bers:beratungs-services']
- }
- /**
-  * returns true, if this build is development branch
-  */
- def isDevelopmentBranch() {
-     return JOB_NAME.endsWith("/development")
- }
+/**
+ * returns true, if the last commit was created by a release build (i.e. contains "maven-release-plugin")
+ */
+def wasLastCommitRelease() {
+  def lastCommit = sh returnStdout: true, script: 'git log -1 --pretty=%B'
+  echo "lastCommit=${lastCommit}"
+  return lastCommit.contains("[maven-release-plugin]")
+}
+/**
+ * returns true, if this build is our multibranch pipeline + branch to be built is "development"
+ */
+def isDevelopmentBranchInMultibranchPipeline() {
+  // in a multibranch pipeline build, the JOB_NAME follows the pattern "JOB_NAME"/"BRANCH_NAME"
+  // in a simple pipeline, it is ["FOLDER_NAME"/]"JOB_NAME"
+  return env.JOB_NAME.endsWith("/develop")
+}
+/**
+ * returns true, if this build is our multibranch pipeline
+ */
+def isMultibranchPipeline() {
+  // in a multibranch pipeline build, the GIT_BRANCH just contains the branch name
+  // in a simple pipeline, it is "origin/branch-name"
+  return !GIT_BRANCH.startsWith("origin/")
+}
+/**
+ * returns true, if this build is our multibranch pipeline
+ */
+def isReleaseBranch() {
+  // in a multibranch pipeline build, the GIT_BRANCH just contains the branch name
+  // in a simple pipeline, it is "origin/branch-name"
+  return GIT_BRANCH.startsWith("release/")
+}
+// Convenience Functions to read variables from the pom.xml
+// Do not change anything below this line.
+// --------------------------------------------------------
+def getVersionFromPom() {
+  def pom = readMavenPom file: 'pom.xml'
+  return pom.version
+}
+def getReleaseVersion(releaseFile) {
+  def props = readProperties file: releaseFile
+  return props['project.rel.com.axa.ch.bers:beratungs-services']
+}
+/**
+ * returns true, if this build is development branch
+ */
+def isDevelopmentBranch() {
+  return JOB_NAME.endsWith("/development")
+}
