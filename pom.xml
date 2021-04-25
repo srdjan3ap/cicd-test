@@ -14,7 +14,7 @@
     </parent>
     <groupId>com.srdjan</groupId>
     <artifactId>cicd-example</artifactId>
-    <version>4.25.0-SNAPSHOT</version>
+    <version>5.4.6-SNAPSHOT</version>
     <name>cicd-example</name>
     <description>Demo project for CI/CD</description>
 
@@ -32,7 +32,7 @@
         <connection>scm:git:git@github.com:srdjan3ap/cicd-test.git</connection>
 
 
-    <tag>HEAD</tag>
+    <tag>release/4.10.0</tag>
   </scm>
 
     <dependencyManagement>
@@ -73,6 +73,11 @@
                     <version>2.5.3</version>
                 </plugin>
                 <plugin>
+                    <groupId>org.codehaus.mojo</groupId>
+                    <artifactId>versions-maven-plugin</artifactId>
+                    <version>2.7</version>
+                </plugin>
+                <plugin>
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
                     <version>2.3.4.RELEASE</version>
@@ -102,9 +107,7 @@
                 <artifactId>maven-release-plugin</artifactId>
                 <version>2.5.3</version>
                 <configuration>
-                     <tagNameFormat>release/@{project.version}</tagNameFormat>
-                    <!-- <tagNameFormat>@{project.artifactId}-@{project.version}</tagNameFormat> -->
-                    <!-- <tagNameFormat>release/R15.1/@{project.version}</tagNameFormat> -->
+                    <tagNameFormat>@{project.version}</tagNameFormat>
                     <checkModificationExcludes>
                         <checkModificationExcludes>**/*.launch</checkModificationExcludes>
                         <checkModificationExcludes>**/pom.xml</checkModificationExcludes>
