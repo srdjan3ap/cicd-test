@@ -8,7 +8,7 @@ pipeline {
         gitCredentialsId = 'github-jenkins-ssh'
         OpenShiftProjectDev = 'axa-advice-sme-dev-axa-ch'
         OpenShiftClusterName = 'axa-advice-sme-dev-axa-ch-private-blue'
-        projects = 'application-form-domain,consultant-domain,meeting-minutes-domain,pdsdocument-domain,activity-domain,partner-domain'
+        //projects = 'application-form-domain,consultant-domain,meeting-minutes-domain,pdsdocument-domain,activity-domain,partner-domain'
     }
     parameters {
         booleanParam(
@@ -95,7 +95,7 @@ pipeline {
             }
             steps {
                 script {
-                    sh "mvn --projects ${projects} --also-make package -Dmaven.repo.local=/var/lib/jenkins/wd/.m2"
+                    sh "mvn --also-make package -Dmaven.repo.local=/var/lib/jenkins/wd/.m2"
                 }
             }
         }
