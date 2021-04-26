@@ -102,7 +102,8 @@ pipeline {
         stage('Update versions and tag - SNAPSHOT') {
             when {
                 allOf {
-                    not { expression { return isRelease } }
+                    not { expression { return false } }
+                    //not { expression { return isRelease } }
                     branch 'develop'
                 }
             }
@@ -117,7 +118,8 @@ pipeline {
         stage('Update versions and tag - RELEASE FIX') {
             when {
                 allOf {
-                    not { expression { return isRelease } }
+                    not { expression { return false } }
+                    //not { expression { return isRelease } }
                     branch pattern: "release/\\.+"
                 }
             }
@@ -190,7 +192,8 @@ def run_s2i_build(domains, projectVersion) {
 def wasLastCommitRelease() {
     def lastCommit = sh returnStdout: true, script: 'git log -1 --pretty=%B'
     echo "lastCommit=${lastCommit}"
-    return lastCommit.contains("[maven-release-plugin]") || lastCommit.contains("[automated-commit]")
+    return lastCommit.contains("[maven-release-plugin]")
+    //return lastCommit.contains("[maven-release-plugin]") || lastCommit.contains("[automated-commit]")
 }
 /**
  * returns true, if this build is our multibranch pipeline + branch to be built is "development"
