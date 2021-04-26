@@ -50,7 +50,7 @@ pipeline {
                     } else {
                         gitBranch = params.BUILD_BRANCH_NAME
                     }
-                    if ((isDevelopmentBranch()) || params.IS_RELEASE) {
+                    if ((isDevelopmentBranch()) && params.IS_RELEASE) {
                         isRelease = true
                     }
                     sh 'git config --global user.email "srdjan@3ap.ch"'
@@ -75,9 +75,9 @@ pipeline {
                                     returnStdout: true,
                                     script: 'git describe --tags `git rev-list --tags --max-count=1`'
                             ).trim()
-                            sh 'git checkout $tag -b release/${latestTag}'
-                            sh 'git push -u origin release/${latestTag}'
-                            echo 'Created new release branch: release/${latestTag}'
+                            sh 'git checkout $tag -b release/\\\${latestTag}'
+                            sh 'git push -u origin release/\\\${latestTag}'
+                            echo 'Created new release branch: release/\\\${latestTag}'
                         }
                     } catch (exc) {
                         echo 'Cleaning up after fail'
