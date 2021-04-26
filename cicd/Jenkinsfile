@@ -235,7 +235,7 @@ def getReleaseVersion(releaseFile) {
  * returns true, if this build is development branch
  */
 def isDevelopmentBranch() {
-    return JOB_NAME.endsWith("/development")
+    return JOB_NAME.endsWith("/develop")
 }
 
 def shouldDeploy() {
