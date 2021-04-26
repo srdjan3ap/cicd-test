@@ -233,10 +233,10 @@ def shouldDeploy() {
     if (params.PREPARE_RELEASE) {
         return false;
     }
-    if (params.DEPLOYMENT_BRANCH === "development" && isDevelopmentBranch()) {
+    if (params.DEPLOYMENT_BRANCH == "development" && isDevelopmentBranch()) {
         return true
     }
-    return params.DEPLOYMENT_BRANCH === GIT_BRANCH && isReleaseBranch()
+    return params.DEPLOYMENT_BRANCH == GIT_BRANCH && isReleaseBranch()
 }
 
 //pipeline {
