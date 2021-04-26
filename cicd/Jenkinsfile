@@ -102,7 +102,7 @@ pipeline {
         stage('Update versions and tag - SNAPSHOT') {
             when {
                 allOf {
-                    not { expression { return false } }
+                    expression { return true }
                     //not { expression { return isRelease } }
                     branch 'develop'
                 }
@@ -118,7 +118,7 @@ pipeline {
         stage('Update versions and tag - RELEASE FIX') {
             when {
                 allOf {
-                    not { expression { return false } }
+                    expression { return false }
                     //not { expression { return isRelease } }
                     branch pattern: "release/\\.+"
                 }
