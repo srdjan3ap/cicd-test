@@ -14,7 +14,7 @@
     </parent>
     <groupId>com.srdjan</groupId>
     <artifactId>cicd-example</artifactId>
-    <version>5.5.0-SNAPSHOT</version>
+    <version>7.7.2</version>
     <name>cicd-example</name>
     <description>Demo project for CI/CD</description>
 
@@ -98,6 +98,23 @@
                         </goals>
                         <configuration>
                             <propertyPrefix>parsedVersion</propertyPrefix>
+                        </configuration>
+                    </execution>
+                    <execution>
+                        <id>regex-properties</id>
+                        <goals>
+                            <goal>regex-properties</goal>
+                        </goals>
+                        <configuration>
+                            <regexPropertySettings>
+                                <regexPropertySetting>
+                                    <name>human.version</name>
+                                    <value>${project.version}</value>
+                                    <regex>-SNAPSHOT</regex>
+                                    <replacement>-SNAPSHOTT</replacement>
+                                    <failIfNoMatch>false</failIfNoMatch>
+                                </regexPropertySetting>
+                            </regexPropertySettings>
                         </configuration>
                     </execution>
                 </executions>
