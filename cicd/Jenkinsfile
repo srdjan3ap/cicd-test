@@ -99,20 +99,50 @@ pipeline {
                 }
             }
         }
-        stage('Update versions and tag') {
+//        stage('Update versions and tag') {
+//            when {
+//                not { expression { return isRelease } }
+//            }
+//            steps {
+//                script {
+//                    if (branch pattern: "release/\\.+") {
+//                        sshagent([gitCredentialsId]) {
+//                            //  sh 'mvn build-helper:parse-version versions:set -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion}-\\\${parsedVersion.qualifier} versions:commit -Dmessage="[automated-commit] Incremented patch version" scm:checkin scm:tag -Dtag=\\\${project.version}'
+//                        }
+//                    } else {
+//                        sshagent([gitCredentialsId]) {
+//                            //  sh 'mvn build-helper:parse-version versions:set -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion}-\\\${parsedVersion.qualifier} versions:commit -Dmessage="[automated-commit] Incremented patch version" scm:checkin scm:tag -Dtag=\\\${project.version}'
+//                        }
+//                    }
+//                }
+//            }
+//        }
+        stage('Update versions and tag - SNAPSHOT') {
             when {
-                not { expression { return isRelease } }
+                allOf {
+                    not { expression { return isRelease } }
+                    branch 'develop'
+                }
             }
             steps {
                 script {
-                    if (branch pattern: "release/\\.+") {
-                        sshagent([gitCredentialsId]) {
-                            //  sh 'mvn build-helper:parse-version versions:set -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion}-\\\${parsedVersion.qualifier} versions:commit -Dmessage="[automated-commit] Incremented patch version" scm:checkin scm:tag -Dtag=\\\${project.version}'
-                        }
-                    } else {
-                        sshagent([gitCredentialsId]) {
-                            //  sh 'mvn build-helper:parse-version versions:set -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion}-\\\${parsedVersion.qualifier} versions:commit -Dmessage="[automated-commit] Incremented patch version" scm:checkin scm:tag -Dtag=\\\${project.version}'
-                        }
+                    sshagent([gitCredentialsId]) {
+                        sh 'mvn build-helper:parse-version versions:set -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion}-\\\${parsedVersion.qualifier} versions:commit -Dmessage="[automated-commit] Incremented patch version" scm:checkin scm:tag -Dtag=\\\${project.version}'
+                    }
+                }
+            }
+        }
+        stage('Update versions and tag - RELEASE FIX') {
+            when {
+                allOf {
+                    not { expression { return isRelease } }
+                    branch pattern: "release/\\.+"
+                }
+            }
+            steps {
+                script {
+                    sshagent([gitCredentialsId]) {
+                        sh 'mvn build-helper:parse-version versions:set -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion} versions:commit -Dmessage="[automated-commit] Incremented patch version" scm:checkin scm:tag -Dtag=\\\${project.version}'
                     }
                 }
             }
@@ -229,7 +259,7 @@ def shouldDeploy() {
     if (params.PREPARE_RELEASE) {
         return false;
     }
-    if (params.DEPLOYMENT_BRANCH == "develop" && isDevelopmentBranch()) {
+    if (params.DEPLOYMENT_BRANCH == "development" && isDevelopmentBranch()) {
         return true
     }
     return params.DEPLOYMENT_BRANCH == GIT_BRANCH && isReleaseBranch()
