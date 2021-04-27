@@ -140,6 +140,7 @@ pipeline {
             steps {
                 script {
                     def projectVersion = getVersionFromPom()
+                    echo "projectVersion = ${getVersionFromPom()}"
                     //run_s2i_build(['activity-domain', 'application-form-domain', 'consultant-domain', 'meeting-minutes-domain', 'partner-domain', 'pdsdocument-domain'], projectVersion)
                     //slackSend(color: 'good', message: "Microservices ${projectVersion} successfully deployed.", channel: "#qa-sme")
                 }
