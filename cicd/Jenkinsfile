@@ -75,7 +75,7 @@ pipeline {
                                     returnStdout: true,
                                     script: 'git describe --tags `git rev-list --tags --max-count=1`'
                             ).trim()
-                            sh "git checkout \$tag -b release/${latestTag}"
+                            sh "git checkout -b release/${latestTag} ${latestTag}"
                             sh "git push -u origin release/${latestTag}"
                             echo "Created new release branch: release/${latestTag}"
                         }
