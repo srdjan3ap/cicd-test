@@ -26,7 +26,7 @@ pipeline {
         stage('Verify NOT Jenkins automated commit') {
             when {
                 expression {
-                    return wasLastCommitAutomated()
+                    return wasLastCommitAutomated() && (isReleaseBranch() || isDevelopmentBranch())
                 }
             }
             steps {
@@ -99,24 +99,7 @@ pipeline {
                 }
             }
         }
-//        stage('Update versions and tag') {
-//            when {
-//                not { expression { return isRelease } }
-//            }
-//            steps {
-//                script {
-//                    if (branch pattern: "release/\\.+") {
-//                        sshagent([gitCredentialsId]) {
-//                            //  sh 'mvn build-helper:parse-version versions:set -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion}-\\\${parsedVersion.qualifier} versions:commit -Dmessage="[automated-commit] Incremented patch version" scm:checkin scm:tag -Dtag=\\\${project.version}'
-//                        }
-//                    } else {
-//                        sshagent([gitCredentialsId]) {
-//                            //  sh 'mvn build-helper:parse-version versions:set -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion}-\\\${parsedVersion.qualifier} versions:commit -Dmessage="[automated-commit] Incremented patch version" scm:checkin scm:tag -Dtag=\\\${project.version}'
-//                        }
-//                    }
-//                }
-//            }
-//        }
+
         stage('Update versions and tag - SNAPSHOT') {
             when {
                 allOf {
