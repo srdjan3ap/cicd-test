@@ -134,10 +134,7 @@ pipeline {
         }
         stage('Update versions and tag - RELEASE FIX') {
             when {
-                allOf {
-                    not { expression { return isRelease } }
-                    branch pattern: "release/\\.+"
-                }
+                expression { return isReleaseBranch() && !isRelease}
             }
             steps {
                 script {
@@ -174,6 +171,7 @@ pipeline {
         }
     }
 }
+
 
 def run_s2i_build(domains, projectVersion) {
     def buildConfig = ["activity-domain"        : "sme-activity",
