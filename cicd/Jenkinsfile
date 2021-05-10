@@ -23,10 +23,7 @@ pipeline {
         )
     }
     stages {
-        stage('Update versions and tag - RELEASE FIX') {
-            when {
-                expression { return isReleaseBranch() && !isRelease}
-            }
+        stage('Fail tests') {
             steps {
                 script {
                     sshagent([gitCredentialsId]) {
@@ -41,12 +38,12 @@ pipeline {
         success {
             //slackSend(color: 'good', message: "Build - ${JOB_NAME} ${BUILD_NUMBER} successful. (<${BUILD_URL}|Open output>)", channel: "#jenkins-sme")
             echo 'BUILD SUCCESSFUL.'
-            emailext body: 'Test Message - success!', recipientProviders: [requestor()], subject: 'Test Subject', to: 'srga89@gmail.com'
+            emailext body: 'Test Message - success!', recipientProviders: [requestor(), developers()], subject: 'Test Subject', to: 'srga89@gmail.com'
         }
         failure {
             //slackSend(color: '#FF0000', message: ":warning: Build - ${JOB_NAME} ${BUILD_NUMBER} failed! (<${BUILD_URL}|Open output>) :warning:", channel: "#jenkins-sme")
             echo 'BUILD FAILED!'
-            emailext body: 'Test Message - failed!', recipientProviders: [requestor()], subject: 'Test Subject', to: 'srga89@gmail.com'
+            emailext body: 'Test Message - failed!', recipientProviders: [requestor(), developers()], subject: 'Test Subject', to: 'srga89@gmail.com'
         }
     }
 }
