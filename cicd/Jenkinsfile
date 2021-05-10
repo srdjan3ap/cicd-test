@@ -23,7 +23,7 @@ pipeline {
         )
     }
     stages {
-        stage('Verify NOT Jenkins automated commit') {
+        stage('Fail the build') {
             steps {
                 script {
                     currentBuild.displayName = "NOT_BUILT"
