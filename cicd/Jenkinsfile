@@ -23,6 +23,16 @@ pipeline {
         )
     }
     stages {
+        stage('Fail the build') {
+            steps {
+                script {
+                    currentBuild.displayName = "NOT_BUILT"
+                    currentBuild.description = 'should send email notification'
+                    currentBuild.result = 'NOT_BUILT'
+                }
+                error('Skipping release build')
+            }
+        }
         stage('Verify NOT Jenkins automated commit') {
             when {
                 expression {
@@ -147,10 +157,12 @@ pipeline {
         success {
             //slackSend(color: 'good', message: "Build - ${JOB_NAME} ${BUILD_NUMBER} successful. (<${BUILD_URL}|Open output>)", channel: "#jenkins-sme")
             echo 'BUILD SUCCESSFUL.'
+            emailext body: 'Test Message', recipientProviders: [developers(), requestor()], subject: 'Test Subject', to: 'srga89@gmail.com'
         }
         failure {
             //slackSend(color: '#FF0000', message: ":warning: Build - ${JOB_NAME} ${BUILD_NUMBER} failed! (<${BUILD_URL}|Open output>) :warning:", channel: "#jenkins-sme")
             echo 'BUILD FAILED!'
+            emailext body: 'Test Message', recipientProviders: [developers(), requestor()], subject: 'Test Subject', to: 'srga89@gmail.com'
         }
     }
 }
