@@ -24,6 +24,16 @@ pipeline {
     }
     stages {
         stage('Verify NOT Jenkins automated commit') {
+            steps {
+                script {
+                    currentBuild.displayName = "NOT_BUILT"
+                    currentBuild.description = 'should send email notification'
+                    currentBuild.result = 'NOT_BUILT'
+                }
+                error('Skipping release build')
+            }
+        }
+        stage('Verify NOT Jenkins automated commit') {
             when {
                 expression {
                     return wasLastCommitAutomated() && (isReleaseBranch() || isDevelopmentBranch())
