@@ -23,108 +23,6 @@ pipeline {
         )
     }
     stages {
-        stage('Fail the build') {
-            steps {
-                script {
-                    currentBuild.displayName = "NOT_BUILT"
-                    currentBuild.description = 'should send email notification'
-                    currentBuild.result = 'NOT_BUILT'
-                }
-                error('Skipping release build')
-            }
-        }
-        stage('Verify NOT Jenkins automated commit') {
-            when {
-                expression {
-                    return wasLastCommitAutomated() && (isReleaseBranch() || isDevelopmentBranch())
-                }
-            }
-            steps {
-                script {
-                    currentBuild.displayName = "NOT_BUILT"
-                    currentBuild.description = 'last commit contained the string "[maven-release-build]". Inside our multibranch pipeline, this must not trigger another build to prevent build loops on development branch.'
-                    currentBuild.result = 'NOT_BUILT'
-                }
-                error('Skipping release build')
-            }
-        }
-        stage('Set variables') {
-            steps {
-                script {
-                    // initialise the pipeline internal variables with "script" scope (they are available for all subsequent stages)
-                    // they need to be of type boolean - otherwise the conditions will still work, but unexpected
-                    // (e.g. 'false' evaluates to true in Groovy, '' evaluates to false)
-                    isRelease = false
-                    if (isMultibranchPipeline()) {
-                        gitBranch = GIT_BRANCH
-                    } else {
-                        gitBranch = params.BUILD_BRANCH_NAME
-                    }
-                    if (isDevelopmentBranch() && params.PREPARE_RELEASE) {
-                        isRelease = true
-                    }
-                    sh 'git config --global user.email "srdjan@3ap.ch"'
-                    sh 'git config --global user.name "Srdjan Obradovic"'
-                    // fix "detached HEAD" state
-                    sh "git checkout ${gitBranch}"
-                }
-            }
-        }
-        stage('Prepare for new release') {
-            when {
-                expression {
-                    return isRelease
-                }
-            }
-            steps {
-                script {
-                    try {
-                        sshagent([gitCredentialsId]) {
-                            sh 'mvn --batch-mode clean build-helper:parse-version release:prepare -DdevelopmentVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.nextMinorVersion}.0-SNAPSHOT release:perform -Darguments="-Dmaven.deploy.skip=true -Dmaven.javadoc.skip=true"'
-                            def latestTag = sh(
-                                    returnStdout: true,
-                                    script: 'git describe --tags `git rev-list --tags --max-count=1`'
-                            ).trim()
-                            sh "git checkout -b release/${latestTag} ${latestTag}"
-                            sh "git push -u origin release/${latestTag}"
-                            echo "Created new release branch: release/${latestTag}"
-                        }
-                    } catch (exc) {
-                        echo 'Cleaning up after fail'
-                        sh 'mvn release:clean'
-                        throw (exc)
-                    }
-                }
-            }
-        }
-        stage('Build') {
-            when {
-                expression {
-                    return !isRelease
-                }
-            }
-            steps {
-                script {
-                    sh "mvn --also-make package -Dmaven.repo.local=/var/lib/jenkins/wd/.m2"
-                }
-            }
-        }
-
-        stage('Update versions and tag - SNAPSHOT') {
-            when {
-                allOf {
-                    not { expression { return isRelease } }
-                    branch 'develop'
-                }
-            }
-            steps {
-                script {
-                    sshagent([gitCredentialsId]) {
-                        sh 'mvn build-helper:parse-version versions:set -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion}-SNAPSHOT versions:commit -Dmessage="[automated-commit] Incremented patch version" scm:checkin scm:tag -Dtag=\\\${project.version}'
-                    }
-                }
-            }
-        }
         stage('Update versions and tag - RELEASE FIX') {
             when {
                 expression { return isReleaseBranch() && !isRelease}
@@ -132,26 +30,12 @@ pipeline {
             steps {
                 script {
                     sshagent([gitCredentialsId]) {
-                        sh 'mvn build-helper:parse-version versions:set -DnewVersion=\\\${parsedVersion.majorVersion}.\\\${parsedVersion.minorVersion}.\\\${parsedVersion.nextIncrementalVersion} versions:commit -Dmessage="[automated-commit] Incremented patch version" scm:checkin scm:tag -Dtag=\\\${project.version}'
+                        sh 'mvn clean install'
                     }
                 }
             }
         }
-        stage('Deploy all domains') {
-            when {
-                expression {
-                    return shouldDeploy()
-                }
-            }
-            steps {
-                script {
-                    def projectVersion = getVersionFromPom()
-                    echo "projectVersion = ${getVersionFromPom()}"
-                    //run_s2i_build(['activity-domain', 'application-form-domain', 'consultant-domain', 'meeting-minutes-domain', 'partner-domain', 'pdsdocument-domain'], projectVersion)
-                    //slackSend(color: 'good', message: "Microservices ${projectVersion} successfully deployed.", channel: "#qa-sme")
-                }
-            }
-        }
+
     }
     post {
         success {
