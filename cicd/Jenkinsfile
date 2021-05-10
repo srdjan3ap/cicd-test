@@ -41,12 +41,12 @@ pipeline {
         success {
             //slackSend(color: 'good', message: "Build - ${JOB_NAME} ${BUILD_NUMBER} successful. (<${BUILD_URL}|Open output>)", channel: "#jenkins-sme")
             echo 'BUILD SUCCESSFUL.'
-            emailext body: 'Test Message', recipientProviders: [developers(), requestor()], subject: 'Test Subject', to: 'srga89@gmail.com'
+            emailext body: 'Test Message - success', recipientProviders: [requestor()], subject: 'Test Subject', to: 'srga89@gmail.com'
         }
         failure {
             //slackSend(color: '#FF0000', message: ":warning: Build - ${JOB_NAME} ${BUILD_NUMBER} failed! (<${BUILD_URL}|Open output>) :warning:", channel: "#jenkins-sme")
             echo 'BUILD FAILED!'
-            emailext body: 'Test Message', recipientProviders: [developers(), requestor()], subject: 'Test Subject', to: 'srga89@gmail.com'
+            emailext body: 'Test Message - failed', recipientProviders: [requestor()], subject: 'Test Subject', to: 'srga89@gmail.com'
         }
     }
 }
